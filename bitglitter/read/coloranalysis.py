@@ -1,13 +1,8 @@
 import math
 
-
 def return_distance(raw_frame_rgb, expected_value):
-    return math.sqrt(
-        ((raw_frame_rgb[0] - expected_value[0]) ** 2)
-        + ((raw_frame_rgb[1] - expected_value[1]) ** 2)
-        + ((raw_frame_rgb[2] - expected_value[2]) ** 2)
-    )
-
+    return math.sqrt(((raw_frame_rgb[0] - expected_value[0]) ** 2) + ((raw_frame_rgb[1] - expected_value[1]) ** 2) +
+                     ((raw_frame_rgb[2] - expected_value[2]) ** 2))
 
 def color_snap(raw_frame_rgb, palette_color_list):
 
