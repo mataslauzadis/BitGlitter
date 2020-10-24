@@ -25,7 +25,7 @@ class Config:
 
 
 class Statistics:
-    """Read and write values are held in this object.  It's attributes are changed through method calls."""
+    """Read and write statistics are held in this object.  Its attributes are changed through method calls."""
 
     def __init__(self):
 
@@ -58,13 +58,6 @@ class Statistics:
         self.blocks_wrote += blocks
         self.frames_wrote += frames
         self.data_wrote += data
-
-    def read_update(self, blocks, frames, data):
-        """Deprecated.  May be removed."""
-
-        self.blocks_read += blocks
-        self.frames_read += frames
-        self.data_read += data
 
     def clear_stats(self):
         self.blocks_wrote = 0
