@@ -3,7 +3,7 @@ import logging
 import os
 
 
-def logging_setter(logging_level, logging_print, logging_save_output):
+def logging_setter(logging_level, logging_print: bool, logging_save_output: bool):
     """This is what the logging level and output during the write operation.  It's worth nothing that this is the ONLY
     function that checks parameters outside of verify_write_parameters, because that function's logging outputs hinge in
     the configuration for logging.

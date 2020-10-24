@@ -54,7 +54,7 @@ class Statistics:
             f"\nTotal Data Read: {int(self.data_read / 8)} B"
         )
 
-    def write_update(self, blocks, frames, data):
+    def write_update(self, blocks: int, frames: int, data: int):
         self.blocks_wrote += blocks
         self.frames_wrote += frames
         self.data_wrote += data
