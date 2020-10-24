@@ -10,55 +10,89 @@ from PIL import ImageDraw
 from bitglitter.palettes.paletteutilities import palette_grabber, ValuesToColor
 
 
-def ascii_header_process(file_mask_enabled, active_path, stream_palette, bg_version, stream_name, stream_description,
-                         post_encryption_hash, encryption_enabled):
-    '''This takes all ASCII elements of the stream header, and returns a formatted merged string.'''
+def ascii_header_process(
+    file_mask_enabled,
+    active_path,
+    stream_palette,
+    bg_version,
+    stream_name,
+    stream_description,
+    post_encryption_hash,
+    encryption_enabled,
+):
+    """This takes all ASCII elements of the stream header, and returns a formatted merged string."""
 
     if file_mask_enabled:
         file_list_string = ""
 
     else:
-        with open(active_path + "\\file_list.txt", 'r') as text_file:
+        with open(active_path + "\\file_list.txt", "r") as text_file:
             file_list_string = text_file.read()
 
-        os.remove(active_path + '\\file_list.txt')
+        os.remove(active_path + "\\file_list.txt")
 
     custom_palette_string = ""
-    if stream_palette.palette_type == 'custom':
-        custom_palette_attribute_list = [stream_palette.name, stream_palette.description,
-                                      str(stream_palette.date_created), str(stream_palette.color_set)]
+    if stream_palette.palette_type == "custom":
+        custom_palette_attribute_list = [
+            stream_palette.name,
+            stream_palette.description,
+            str(stream_palette.date_created),
+            str(stream_palette.color_set),
+        ]
         custom_palette_string = "\\\\".join(custom_palette_attribute_list) + "\\\\"
 
     crypto_string = ""
     if encryption_enabled:
         crypto_string = post_encryption_hash + "\\\\"
 
-    meta_data_string = "\\\\" + "\\\\".join([bg_version, stream_name, stream_description, file_list_string]) + "\\\\"
+    meta_data_string = (
+        "\\\\"
+        + "\\\\".join([bg_version, stream_name, stream_description, file_list_string])
+        + "\\\\"
+    )
 
     merged_string = "".join([meta_data_string, custom_palette_string, crypto_string])
-    logging.debug(f'ASCII Stream Header merged: {merged_string}')
+    logging.debug(f"ASCII Stream Header merged: {merged_string}")
 
     # Next, we're compressing it
     compressed_stream_header = zlib.compress(merged_string.encode(), level=9)
     compressed_file_size = len(compressed_stream_header)
-    logging.debug(f'ASCII Stream Header compressed. ({len(merged_string)} B -> {compressed_file_size} B)')
+    logging.debug(
+        f"ASCII Stream Header compressed. ({len(merged_string)} B -> {compressed_file_size} B)"
+    )
 
     return compressed_stream_header
 
 
-def generate_stream_header_binary_preamble(size_in_bytes, total_frames, compression_enabled, encryption_enabled,
-                                           file_mask_enabled, is_stream_palette_custom, date_created, stream_palette_id,
-                                           ascii_compressed_length):
-    '''The binary preamble for the Stream Header is created here.  For videos and images, this is only needed for the
+def generate_stream_header_binary_preamble(
+    size_in_bytes,
+    total_frames,
+    compression_enabled,
+    encryption_enabled,
+    file_mask_enabled,
+    is_stream_palette_custom,
+    date_created,
+    stream_palette_id,
+    ascii_compressed_length,
+):
+    """The binary preamble for the Stream Header is created here.  For videos and images, this is only needed for the
     first frame.
-    '''
+    """
 
     adding_bits = BitStream()
 
     adding_bits.append(BitArray(uint=size_in_bytes, length=64))
     adding_bits.append(BitArray(uint=total_frames, length=32))
-    adding_bits.append(BitArray([int(compression_enabled), int(encryption_enabled),
-                                 int(file_mask_enabled), is_stream_palette_custom]))
+    adding_bits.append(
+        BitArray(
+            [
+                int(compression_enabled),
+                int(encryption_enabled),
+                int(file_mask_enabled),
+                is_stream_palette_custom,
+            ]
+        )
+    )
     adding_bits.append(BitArray(uint=date_created, length=34))
 
     if is_stream_palette_custom:
@@ -69,14 +103,14 @@ def generate_stream_header_binary_preamble(size_in_bytes, total_frames, compress
 
     adding_bits.append(BitArray(uint=ascii_compressed_length, length=32))
 
-    logging.debug('streamHeader generated.')
+    logging.debug("streamHeader generated.")
     return ConstBitStream(adding_bits)
 
 
 def generate_frame_header(stream_sha, frame_hashable_bits, frame_number, blocks_used):
-    '''This creates the header that is present at the beginning of every frame (excluding the first frame or image
+    """This creates the header that is present at the beginning of every frame (excluding the first frame or image
     outputs).  These headers orient the reader, in that it tells it where it is in the stream.
-    '''
+    """
 
     full_bit_string = BitArray()
 
@@ -97,15 +131,22 @@ def generate_frame_header(stream_sha, frame_hashable_bits, frame_number, blocks_
     return full_bit_string
 
 
-def how_many_frames(block_height, block_width, ascii_compressed_size, size_in_bytes, stream_palette, header_palette,
-                    output_mode):
-    '''This method returns how many frames will be required to complete the rendering process.'''
+def how_many_frames(
+    block_height,
+    block_width,
+    ascii_compressed_size,
+    size_in_bytes,
+    stream_palette,
+    header_palette,
+    output_mode,
+):
+    """This method returns how many frames will be required to complete the rendering process."""
 
     logging.debug("Calculating how many frames to render...")
 
     total_blocks = block_height * block_width
     stream_header_overhead_in_bits = 422 + (ascii_compressed_size * 8)
-    stream_size_in_bits = (size_in_bytes * 8)
+    stream_size_in_bits = size_in_bytes * 8
     header_bit_length = header_palette.bit_length
     stream_bit_length = stream_palette.bit_length
 
@@ -121,20 +162,28 @@ def how_many_frames(block_height, block_width, ascii_compressed_size, size_in_by
 
         bits_consumed = frame_header_overhead
         blocks_left = total_blocks
-        blocks_left -= (initializer_overhead * int(output_mode == 'image' or frame_number == 0))
+        blocks_left -= initializer_overhead * int(
+            output_mode == "image" or frame_number == 0
+        )
 
-        stream_header_bits_available = (blocks_left * header_bit_length) - frame_header_overhead
+        stream_header_bits_available = (
+            blocks_left * header_bit_length
+        ) - frame_header_overhead
 
         if stream_header_bits_left >= stream_header_bits_available:
             stream_header_bits_left -= stream_header_bits_available
 
-        else: # stream_header_combined terminates on this frame
+        else:  # stream_header_combined terminates on this frame
             stream_header_bits_available -= stream_header_bits_left
             bits_consumed += stream_header_bits_left
             stream_header_bits_left = 0
 
-            stream_header_blocks_used = math.ceil(bits_consumed / header_palette.bit_length)
-            attachment_bits = header_palette.bit_length - (bits_consumed % header_palette.bit_length)
+            stream_header_blocks_used = math.ceil(
+                bits_consumed / header_palette.bit_length
+            )
+            attachment_bits = header_palette.bit_length - (
+                bits_consumed % header_palette.bit_length
+            )
 
             if attachment_bits > 0:
                 data_left -= attachment_bits
@@ -152,26 +201,26 @@ def how_many_frames(block_height, block_width, ascii_compressed_size, size_in_by
 
     # Calculating how much data can be embedded in a regular frame_payload frame, and returning the total frame count
     # needed.
-    blocks_left = total_blocks - (initializer_overhead * int(output_mode == 'image'))
+    blocks_left = total_blocks - (initializer_overhead * int(output_mode == "image"))
     payload_bits_per_frame = (blocks_left * stream_bit_length) - frame_header_overhead
 
     total_frames = math.ceil(data_left / payload_bits_per_frame) + frame_number
-    logging.info(f'{total_frames} frame(s) required for this operation.')
+    logging.info(f"{total_frames} frame(s) required for this operation.")
     return total_frames
 
 
 def generate_initializer(block_height, block_width, protocol_version, header_palette):
-    '''This generates the initializer header, which is present in black and white colors on the top of the first frame
+    """This generates the initializer header, which is present in black and white colors on the top of the first frame
     of video streams, and every frame of image streams.  It provides import information on stream geometry as well as
     protocol version.
-    '''
+    """
 
     full_bit_string = BitArray()
     full_bit_string.append(BitArray(uint=protocol_version, length=4))
     full_bit_string.append(BitArray(uint=block_height, length=16))
     full_bit_string.append(BitArray(uint=block_width, length=16))
 
-    if header_palette.palette_type == 'default':
+    if header_palette.palette_type == "default":
         full_bit_string.append(BitArray(uint=int(header_palette.id), length=256))
 
     else:
@@ -185,24 +234,27 @@ def generate_initializer(block_height, block_width, protocol_version, header_pal
 
 
 def render_calibrator(image, block_height, block_width, pixel_width):
-    '''This creates the checkboard-like pattern along the top and left of the first frame of video streams, and every
+    """This creates the checkboard-like pattern along the top and left of the first frame of video streams, and every
     frame of image streams.  This is what the reader uses to initially lock onto the frame.  Stream block_width and
     block_height are encoded into this pattern, using alternating color palettes so no two repeating values produce a
-    continuous block of color, interfering with the frame lock process.'''
+    continuous block of color, interfering with the frame lock process."""
 
-    initializer_palette_dict_a = ValuesToColor(palette_grabber('1'), 'initializer_palette A')
-    initializer_palette_dict_b = ValuesToColor(palette_grabber('11'), 'initializer_palette B')
+    initializer_palette_dict_a = ValuesToColor(
+        palette_grabber("1"), "initializer_palette A"
+    )
+    initializer_palette_dict_b = ValuesToColor(
+        palette_grabber("11"), "initializer_palette B"
+    )
 
     draw = ImageDraw.Draw(image)
-    draw.rectangle((0, 0, pixel_width - 1, pixel_width - 1),
-                   fill='rgb(0,0,0)')
+    draw.rectangle((0, 0, pixel_width - 1, pixel_width - 1), fill="rgb(0,0,0)")
 
     block_width_encoded = BitArray(uint=block_width, length=block_width - 1)
     block_width_encoded.reverse()
     readable_block_width = ConstBitStream(block_width_encoded)
 
     for i in range(block_width - 1):
-        next_bit = readable_block_width.read('bits : 1')
+        next_bit = readable_block_width.read("bits : 1")
 
         if i % 2 == 0:
             color_value = initializer_palette_dict_b.get_color(ConstBitStream(next_bit))
@@ -210,18 +262,22 @@ def render_calibrator(image, block_height, block_width, pixel_width):
         else:
             color_value = initializer_palette_dict_a.get_color(ConstBitStream(next_bit))
 
-        draw.rectangle((pixel_width * i + pixel_width,
-                        0,
-                        pixel_width * (i + 1) - 1 + pixel_width,
-                        pixel_width - 1),
-                       fill=f'rgb{str(color_value)}')
+        draw.rectangle(
+            (
+                pixel_width * i + pixel_width,
+                0,
+                pixel_width * (i + 1) - 1 + pixel_width,
+                pixel_width - 1,
+            ),
+            fill=f"rgb{str(color_value)}",
+        )
 
     block_height_encoded = BitArray(uint=block_height, length=block_height - 1)
     block_height_encoded.reverse()
     readable_block_height = ConstBitStream(block_height_encoded)
 
     for i in range(block_height - 1):
-        next_bit = readable_block_height.read('bits : 1')
+        next_bit = readable_block_height.read("bits : 1")
 
         if i % 2 == 0:
             color_value = initializer_palette_dict_b.get_color(ConstBitStream(next_bit))
@@ -229,21 +285,29 @@ def render_calibrator(image, block_height, block_width, pixel_width):
         else:
             color_value = initializer_palette_dict_a.get_color(ConstBitStream(next_bit))
 
-        draw.rectangle((0,
-                        pixel_width * i + pixel_width,
-                        pixel_width - 1,
-                        pixel_width * (i + 1) - 1 + pixel_width),
-                       fill=f'rgb{str(color_value)}')
+        draw.rectangle(
+            (
+                0,
+                pixel_width * i + pixel_width,
+                pixel_width - 1,
+                pixel_width * (i + 1) - 1 + pixel_width,
+            ),
+            fill=f"rgb{str(color_value)}",
+        )
 
     return image
 
 
 def loop_generator(block_height, block_width, pixel_width, initializer_enabled):
-    '''This generator yields the coordinates for each of the blocks used, depending on the geometry of the frame.'''
+    """This generator yields the coordinates for each of the blocks used, depending on the geometry of the frame."""
 
     for yRange in range(block_height - int(initializer_enabled)):
         for xRange in range(block_width - int(initializer_enabled)):
-            yield ((pixel_width * int(initializer_enabled)) + (pixel_width * xRange),
-                   (pixel_width * int(initializer_enabled)) + (pixel_width * yRange),
-                   (pixel_width * int(initializer_enabled)) + (pixel_width * (xRange + 1) - 1),
-                   (pixel_width * int(initializer_enabled)) + (pixel_width * (yRange + 1) - 1))
+            yield (
+                (pixel_width * int(initializer_enabled)) + (pixel_width * xRange),
+                (pixel_width * int(initializer_enabled)) + (pixel_width * yRange),
+                (pixel_width * int(initializer_enabled))
+                + (pixel_width * (xRange + 1) - 1),
+                (pixel_width * int(initializer_enabled))
+                + (pixel_width * (yRange + 1) - 1),
+            )
