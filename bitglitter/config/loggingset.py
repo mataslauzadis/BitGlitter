@@ -31,7 +31,7 @@ def logging_setter(logging_level, logging_print: bool, logging_save_output: bool
         if not os.path.isdir("logs"):
             os.mkdir("logs")
         log_output_name = (
-            f"logs\\{datetime.datetime.now().strftime('%Y-%m-%d %H-%M-%S')}.txt"
+            os.path.join("logs", f"{datetime.datetime.now().strftime('%Y-%m-%d %H-%M-%S')}.txt")
         )
         output_log = logging.getLogger()
         output_log_handler = logging.FileHandler(log_output_name)
