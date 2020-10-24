@@ -7,20 +7,16 @@ import bitglitter.filepackager.fileio as fileio
 
 
 class Folder:
-    def __init__(self, name=None, file_path=None):
-
+    def __init__(self, name: str = None, file_path: str = None):
         self.contains = []
         self.current_path = []
         self.unique_folder_names = {}
         self.unique_file_names = {}
 
         if file_path == None:
-
             self.name = name
             self.file_path = file_path
-
-        if file_path != None:
-
+        else:
             try:
                 self.name = os.path.basename(file_path)
                 self.file_path = file_path
@@ -29,7 +25,10 @@ class Folder:
                 self.name = name
                 self.file_path = None
 
-    def copy_attributes(self, source_folder):
+    def copy_attributes(self, source_folder: Folder):
+        """
+        Copies the attributes from a source_folder to self.
+        """
 
         self.current_path = source_folder.current_path
         self.file_path = source_folder.file_path
@@ -39,24 +38,17 @@ class Folder:
         self.unique_file_names = source_folder.unique_file_names
 
     def __repr__(self):
-
         return "[" + self.name + "]"
 
-    def __sub__(self, other=""):
-
-        if type(other) is str:
-
+    def __sub__(self, other: str = ""):
+        if isinstance(other, str):
             if len(self.current_path) == 0:
-
                 for items in self.contains:
-
                     if items.name == other:
-
                         self.contains.remove(items)
                         break
 
-            if len(self.current_path) > 0:
-
+            else:
                 self.contains[self.current_path[0]] = self.action_path(
                     other,
                     self.contains[self.current_path[0]],
@@ -67,16 +59,12 @@ class Folder:
         return self
 
     def __add__(self, other):  # Must take in File or Folder.
-
         if type(other) is File or type(other) is Folder:
-
             if len(self.current_path) == 0:
-
                 other = self.return_fixed_name(other)
                 self.contains.append(other)
 
-            if len(self.current_path) > 0:
-
+            else:
                 self.contains[self.current_path[0]] = self.action_path(
                     other,
                     self.contains[self.current_path[0]],
@@ -87,11 +75,10 @@ class Folder:
         return self
 
     def move_into(self, folder_name):
-
         this_folder = Folder()
         this_folder.copy_attributes(self)
 
-        for index in range(0, len(self.current_path)):
+        for index in range(len(self.current_path)):
             this_folder = this_folder.contains[self.current_path[index]]
 
         index = 0

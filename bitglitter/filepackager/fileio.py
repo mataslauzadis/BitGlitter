@@ -3,23 +3,27 @@ import os
 # Written by Tanmay Mishra.  See filepackager module for more information.
 
 
-def copy_file(source, destination, byte_start=None, byte_end=None):
-
+def copy_file(
+    source: str, destination: str, byte_start: int = None, byte_end: int = None
+):
+    """
+    Copies file content from source to destination with optional byte truncation.
+    """
     try:
-        write_file = open(str(destination), "wb")
+        with open(str(destination), "wb") as write_file:
+            with open(str(source), "rb") as open_file:
+                write_file.write(open_file.read()[byte_start:byte_end])
 
-        with open(str(source), "rb") as open_file:
-            write_file.write(open_file.read()[byte_start:byte_end])
-
-        write_file.close()
         return True
 
     except:
         return False
 
 
-def file_to_bytes(file_name, byte_start=None, byte_end=None):
-
+def file_to_bytes(file_name: str, byte_start: int = None, byte_end: int = None):
+    """
+    Reads a file and returns a string of bytes.
+    """
     try:
         with open(file_name, "rb") as open_file:
             my_bytes = open_file.read()[byte_start:byte_end]
@@ -29,9 +33,11 @@ def file_to_bytes(file_name, byte_start=None, byte_end=None):
         return b""
 
 
-def bytes_to_file(file_name, my_bytes):
+def bytes_to_file(file_name: str, my_bytes: bytes):
+    """
+    Writes a string of bytes to file_name.
+    """
     try:
-
         with open(file_name, "wb") as write_file:
             write_file.write(my_bytes)
         return True
@@ -39,57 +45,43 @@ def bytes_to_file(file_name, my_bytes):
         return False
 
 
-def bytes_or_files_to_bytes(items=[]):
-
+def bytes_or_files_to_bytes(items: list = []):
+    """
+    Converts a list of bytes and filepaths to a string of bytes.
+    Reads the file content, converting it to bytes and appending it in order.
+    """
     bytes_return = b""
 
     for item in items:
         if type(item) is bytes:
             bytes_return += item
-        if type(item) is str and does_file_exist(item):
-            bytes_from_file = file_to_bytes(item)
-            bytes_return += bytes_from_file
+        if type(item) is str and os.path.isfile(item):
+            bytes_return += file_to_bytes(item)
 
     return bytes_return
 
 
-def bytes_or_files_to_file(file_name, items=[]):
+def bytes_or_files_to_file(file_name: str, items: list = []):
+    """
+    Takes a list of byte strings and filepaths, converting them all to bytes, and then writes it all to one file.
+    """
 
     try:
         my_bytes = bytes_or_files_to_bytes(items)
         return bytes_to_file(file_name, my_bytes)
     except:
-        delete_file(file_name)
+        try:
+            os.remove(str(file_name))
+        except:
+            return False
         return False
 
 
-def does_file_exist(file_name):
-
-    return os.path.isfile(file_name)
-
-
-def get_file_size(file_name):
-    try:
-        return os.path.getsize(str(file_name))
-    except:
-        return None
-
-
-def delete_file(file_name):
-
-    try:
-        os.remove(str(file_name))
-        return True
-    except:
-        return False
-
-
-def separate_file_name(file_name=""):
-
+def separate_file_name(file_name: str = ""):
     index_ext = 0
     len_file = len(file_name)
 
-    for i in range(0, len_file):
+    for i in range(len_file):
         if file_name[(len_file - i) : len_file - i + 1] == ".":
             index_ext = len_file - i
             break
